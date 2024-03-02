@@ -1,4 +1,4 @@
-\documentclass[a4paper]{article} 
+\documentclass[a4paper,11pt]{article} 
 \input{style/head.tex}
 
 %-------------------------------
@@ -29,273 +29,108 @@ This is the solvement for the CS5293 Assignment II. Each Task have a short statm
 
 \subsection{Manipulating environment variables}\label{sec:task1}
 
-For this question, I mainly conducted decryption tests through the statistical frequency of the main letters. After multiple rounds of letter deduction, as shown in Figure \ref{fig:task1.1}. 
+For this question, 
+
+1. No output occurred when searching for \verb|foo| initially, indicating the variable wasn't part of the environment.
+
+2. After setting \verb|foo| with a string value, it still didn't appear in the environment, as assignment alone doesn't export it.
+
+3. Post \verb|export foo|, the variable \verb|foo| displayed with \verb|printenv|, confirming its addition to the environment.
+
+4. Following \verb|unset foo|, the variable \verb|foo| ceased to appear, signifying its removal from the environment. \ref{fig:task1.2}. 
 
 \begin{figure}[h]
     \centering
-       \includegraphics[width=0.96\textwidth]{figures/task1/task1.1.png}
-    \caption{Execute Result}\label{fig:task1.1}
+  \subfloat[printenv\label{fig:task1.1}]{%
+       \includegraphics[width=0.35\textwidth]{figures/task1/task1.1.png}}
+    \hfill
+  \subfloat[set and unset env\label{fig:task1.2}]{%
+        \includegraphics[width=0.54\textwidth]{figures/task1/task1.2.png}}
+    \hfill
+    \caption{Execute Result}\label{fig:task1}
 \end{figure}
 
-\begin{figure}[h]
-    \centering
-       \includegraphics[width=0.96\textwidth]{figures/task1/task1.2.png}
-    \caption{Execute Result}\label{fig:task1.2}
-\end{figure}
+\textbf{Conclusion:}
 
+Variables must be exported to appear in the environment. The `unset` command effectively removes them. This demonstrates the lifecycle of environment variables in Bash.
 
 \subsection{Environment variable and Set-UID Programs}
 
-\begin{lstlisting}[caption={TASK\ 2.2\ Command\ Line},label={lst:task2.2},language=BASH,breaklines=true]
-$ openssl enc -aes-128-cbc -e -in plaintext.txt -out cipher_aes128cbc.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708 # aes-128-cbc encryption
-$ openssl enc -aes-256-cbc -e -in plaintext.txt -out cipher_aes256cbc.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708 # aes-256-cbc encryption
-$ openssl enc -bf-cbc -e -in plaintext.txt -out cipher_blowfishcbc.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708 # blowfish encryption
-$ openssl enc -aes-128-cfb -e -in plaintext.txt -out cipher_aes128cfb.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708 # aes-128-cfb encryption
-\end{lstlisting}
-
-As shown in listing \ref{lst:task2.2}, I try to use 4 different encryption ciphers by openssl to encrypt the plaintext generated in Sec \ref{sec:task1}.
-
-\subsection{Task 3: Encryption Mode - ECB vs. CBC}
-I conduct the following command \ref{lst:task2.3} to encrypt the original images to ECB and CBC respectively. It's not hard to seen that the ECB mode encrypted image have a characteristics of the original image, while the CBC doesn't, as shown in Figure \ref{fig:task3encrypted}.
-\begin{lstlisting}[caption={TASK\ 2.3\ Command\ Lines},label={lst:task2.3},language=BASH,breaklines=true]
-$ openssl enc -aes-128-ecb -e -in pic_original.bmp -out encrypted_ecb.bmp -K 00112233445566778889aabbccddeeff # ECB Mode
-$ openssl enc -aes-128-cbc -e -in pic_original.bmp -out encrypted_cbc.bmp -K 00112233445566778889aabbccddeeff  -iv 0102030405060708 # CBC Mode
-\end{lstlisting}
+Initially, \verb|foo| was unset and, as expected, didn't appear in the output of the Set-UID program. Upon setting \verb|foo| with a value but without exporting, \verb|foo| still did not show up. This is because the Set-UID program inherits only exported environment variables. After exporting \verb|foo|, it was then visible in the output, indicating that the Set-UID program did inherit \verb|foo| from the user's process as \ref{fig:task2}. 
 
 \begin{figure}[h]
     \centering
-       \includegraphics[width=0.48\textwidth]{figures/task3/originalimage.png}
-    \caption{Original image}\label{fig:task3original}
+       \includegraphics[width=0.7\textwidth]{figures/task2/task2.png}
+    \caption{Execute Result}\label{fig:task2}
 \end{figure}
+
+\textbf{Conclusion:}
+
+The Set-UID programs inherit exported environment variables from the user's process. This demonstrates how users can influence Set-UID program behavior through the environment, emphasizing the need for careful security practices around such programs.
+
+\subsection{The PATH Environment variable and Set-UID Programs}
+
+The manipulations with the \verb|PATH| variable and the Set-UID \verb|ls| program demonstrate how the system's behavior changed. Initially, the custom \verb|ls| program, when executed, listed the contents of the current directory, similar to the standard \verb|/bin/ls| command. After modifying the \verb|PATH| variable to include the current directory at the beginning and changing the ownership and permissions of the \verb|ls| program to mimic a Set-UID program, the \verb|ls| command should have executed the malicious program. However, the output indicates that the custom \verb|ls| program printed a message and the user IDs, which were both 1000, meaning it did not run with root privileges.
 
 \begin{figure}[h]
     \centering
-  \subfloat[ECB Mode\label{ECB}]{%
-       \includegraphics[width=0.48\textwidth]{figures/task3/new_ecb.png}}
-    \hfill
-  \subfloat[CBC Mode\label{CBC}]{%
-        \includegraphics[width=0.48\textwidth]{figures/task3/new_cbc.png}}
-    \hfill
-    \caption{Encrypted images}\label{fig:task3encrypted}
+       \includegraphics[width=0.95\textwidth]{figures/task3/task3.png}
+    \caption{Execute Result}\label{fig:task3}
+\end{figure}
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.5\textwidth]{figures/task3/task3.1.png}
+    \caption{Execute Result After Set-UID}\label{fig:task3.1}
 \end{figure}
 
-\subsection{Task 4: Padding}
+\textbf{Conclusion:}
 
-\begin{enumerate}
-    \item \begin{itemize}
-        \item \textbf{ECB, CBC:} Ciphertext is divided into blocks, so padding is needed.
-        \item \textbf{CFB, OFB:} Operate on smaller units (e.g., 8 bits), so padding isn't strictly required. They can still apply padding for compatibility or security reasons.
-      \end{itemize}
-    \item The following listing shows the results.
-\begin{lstlisting}[caption={TASK\ 2.4\ Command\ Lines},label={lst:task2.4},language=BASH,breaklines=true]
-# generate small files
-$ echo -n "12345" > f1.txt
-$ echo -n "1234567890" > f2.txt
-$ echo -n "1234567890123456" > f3.txt
+If the Set-UID program runs our code instead of the intended \verb|/bin/ls|, the code will execute with root privileges because Set-UID programs run with the effective permissions of the file owner, which is root in this case. This demonstrates a significant security risk with using relative paths in Set-UID programs and highlights the importance of using absolute paths for system calls.
 
-# encrypt the small files by aes-128-cbc
-$ openssl enc -aes-128-cbc -e -in f1.txt -out f1_encrypted_cbc.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-$ openssl enc -aes-128-cbc -e -in f2.txt -out f2_encrypted_cbc.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-$ openssl enc -aes-128-cbc -e -in f3.txt -out f3_encrypted_cbc.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708
+\subsection{The LD\_PRELOAD environment variable and Set-UID Programs}
+1. When \verb|myprog| was a regular program, running it as a normal user resulted in the overridden \verb|sleep| function being called, confirming that \verb|LD_PRELOAD| influenced the linker to load \verb|libmylib.so.1.0.1| first.
 
-# dencrypt the small files by aes-128-cbc with -nopad
-$ openssl enc -aes-128-cbc -d -nopad -in f1_encrypted_cbc.bin -out f1_decrypted_cbc.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-$ openssl enc -aes-128-cbc -d -nopad -in f2_encrypted_cbc.bin -out f2_decrypted_cbc.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-$ openssl enc -aes-128-cbc -d -nopad -in f3_encrypted_cbc.bin -out f3_decrypted_cbc.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708
+2. After making \verb|myprog| a Set-UID root program, running it as a normal user did not invoke the overridden \verb|sleep|, indicating that the Set-UID program did not inherit the \verb|LD_PRELOAD| variable from the user's environment, likely for security reasons.
 
-# observe the results
-$ hexdump -C f3_decrypted_cbc.bin
-00000000  31 32 33 34 35 36 37 38  39 30 31 32 33 34 35 36  |1234567890123456|
-00000010  10 10 10 10 10 10 10 10  10 10 10 10 10 10 10 10  |................|
-00000020
-$ hexdump -C f3.txt
-00000000  31 32 33 34 35 36 37 38  39 30 31 32 33 34 35 36  |1234567890123456|
-00000010
-$ hexdump -C f1.txt
-00000000  31 32 33 34 35                                    |12345|
-00000005
-$ hexdump -C f1_decrypted_cbc.bin
-00000000  31 32 33 34 35 0b 0b 0b  0b 0b 0b 0b 0b 0b 0b 0b  |12345...........|
-\end{lstlisting}
-\end{enumerate}
+3. Exporting \verb|LD_PRELOAD| in the root account and then running the Set-UID root \verb|myprog| resulted in the overridden \verb|sleep| being called, suggesting that when the Set-UID program is run by root, it respects the \verb|LD_PRELOAD| variable.
 
-\subsection{Task 5: Error Propagation - Corrupted Cipher Text}
-\textbf{Expected Behavior:}
-\begin{itemize}
-    \item  In ECB mode, each block is encrypted independently of other blocks. A single bit error in one block should only affect that block during decryption, not propagating errors to subsequent blocks.
-    \item CBC mode XORs each plaintext block with the ciphertext block from the previous iteration. A single bit error in one block will result in unpredictable errors in both the corresponding block and the following blocks during decryption.
-    \item CFB mode operates on the output of the encryption operation, and errors should not propagate to subsequent blocks during decryption.
-    \item Similar to CFB, OFB mode operates on the output of the encryption operation, and errors should not propagate to subsequent blocks during decryption.
-\end{itemize}
-
-\textbf{Conduct Experiments:}
-\begin{lstlisting}[caption={TASK\ 2.5\ Command\ Lines},label={lst:task2.5},language=BASH,breaklines=true]
-# generate a 1.2k bytes abcd repeating textual file
-$ echo -n $(printf 'abcd%.0s' {1..300}) > plaintext.txt
-
-# encrypt the file by different mode
-$ openssl enc -aes-128-ecb -e -in plaintext.txt -out encrypted_aes_ecb.bin -K 00112233445566778889aabbccddeeff
-$ openssl enc -aes-128-cbc -e -in plaintext.txt -out encrypted_aes_cbc.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-$ openssl enc -aes-128-cfb -e -in plaintext.txt -out encrypted_aes_cfb.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-$ openssl enc -aes-128-ofb -e -in plaintext.txt -out encrypted_aes_ofb.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-
-# manually edit the bit of the 55th byte
-$ bless encrypted_aes_ecb.bin # manually edit the bit of the 55th byte
-$ bless encrypted_aes_cbc.bin # manually edit the bit of the 55th byte
-$ bless encrypted_aes_cfb.bin # manually edit the bit of the 55th byte
-$ bless encrypted_aes_ofb.bin # manually edit the bit of the 55th byte
-
-# decrypt the file by different mode
-$ openssl enc -aes-128-ecb -d -in encrypted_aes_ecb.bin  -out decrypted_ecb.txt -K 00112233445566778889aabbccddeeff
-$ openssl enc -aes-128-cbc -d -in encrypted_aes_cbc.bin -out decrypted_cbc.txt -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-$ openssl enc -aes-128-cfb -d -in encrypted_aes_cfb.bin  -out decrypted_cfb.txt -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-$ openssl enc -aes-128-ofb -d -in encrypted_aes_ofb.bin  -out decrypted_ofb.txt -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-\end{lstlisting}
+4. With \verb|myprog| set as a Set-UID program owned by another user (user1) and \verb|LD_PRELOAD| set in a non-root account, the overridden \verb|sleep| was not called, similar to the second case, reinforcing the idea that Set-UID programs ignore \verb|LD_PRELOAD| from non-owner environments.
 
 \begin{figure}[h]
     \centering
-  \subfloat[ECB Mode]{%
-       \includegraphics[width=0.48\textwidth]{figures/task5/ecb.png}}
-    \hfill
-  \subfloat[CBC Mode]{%
-        \includegraphics[width=0.48\textwidth]{figures/task5/cbc.png}}
-    \hfill
-  \subfloat[CFB Mode]{%
-        \includegraphics[width=0.48\textwidth]{figures/task5/cfb.png}}
-    \hfill
-  \subfloat[OFB Mode]{%
-        \includegraphics[width=0.48\textwidth]{figures/task5/ofb.png}}
-    \hfill
-    \caption{Error Propagation Observation}\label{fig:task5}
+       \includegraphics[width=0.9\textwidth]{figures/task4/task4.png}
+    \caption{Execute Result}\label{fig:task4}
 \end{figure}
 
-\textbf{Justification:}
-\begin{itemize}
-    \item  In ECB mode, As expected, errors in ECB mode do not propagate to subsequent blocks, and the corrupted block is isolated.
-    \item Errors in CBC mode propagate to subsequent blocks due to the XOR operation with the previous ciphertext block.
-    \item CFB mode operates on the output of the encryption operation, and errors should not propagate to subsequent blocks during decryption.
-    \item CFB and OFB: Errors in both CFB and OFB modes do not propagate to subsequent blocks, as they operate on the output of the encryption operation.
-\end{itemize}
+\subsection{Invoking external programs using system() versus execve()}
+1.If Bob were to exploit the \verb|system()| call with a command like ``./25 /etc/passwd; rm -f /path/to/some/file", as figured in \ref{fig:task5.1}, the shell would execute the \verb|cat /etc/passwd| command and then attempt the \verb|rm -f| command, potentially allowing unauthorized file deletion if the syntax were correct and the shell executes the second command.
 
-\subsection{Task 6: Initial Vector (IV)}
+The use of \verb|system()| in a Set-UID program poses a security risk due to its reliance on the shell, which can interpret additional commands and metacharacters. This risk is not present with \verb|execve()| as it does not invoke a shell and executes the specified command directly. The observations suggest that the program is functioning with elevated privileges, but the specific access to \verb|/etc/shadow| could not be confirmed from the provided output.
 
-\begin{itemize}
-    \item \textbf{Task 6.1} 
-\begin{lstlisting}[caption={TASK\ 2.6.1\ Command\ Lines},label={lst:task2.6.1},language=BASH,breaklines=true]
-# generate a plain text
-$ echo -n "1234567890123456123123" > plaintext.txt
-# Encrypting with Two Different IVs:
-$ openssl enc -aes-128-cbc -e -in plaintext.txt -out encrypted_iv1.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-$ openssl enc -aes-128-cbc -e -in plaintext.txt -out encrypted_iv2.bin -K 00112233445566778889aabbccddeeff -iv 1122334455667788
-# Encrypting with the Same IV:
-$ openssl enc -aes-128-cbc -e -in plaintext.txt -out encrypted_same_iv.bin -K 00112233445566778889aabbccddeeff -iv 0102030405060708
-# Observations:
-$ hexdump -C encrypted_iv1.bin
-00000000  ec fb 05 81 98 77 71 c9  46 02 98 ba 32 85 a2 c2  |.....wq.F...2...|
-00000010  3a 5a 5c 7f ac 22 10 62  b6 a8 6b 86 52 da 3a 24  |:Z\..".b..k.R.:$|
-00000020
-$ hexdump -C encrypted_iv2.bin
-00000000  bb cf 5b 59 ae 45 65 1d  00 d5 9c ba ec 4e 13 9e  |..[Y.Ee......N..|
-00000010  ef 6d 53 d9 63 8d 0b aa  48 ae 20 28 b9 2c 45 f8  |.mS.c...H. (.,E.|
-00000020
-$ hexdump -C encrypted_same_iv.bin
-00000000  ec fb 05 81 98 77 71 c9  46 02 98 ba 32 85 a2 c2  |.....wq.F...2...|
-00000010  3a 5a 5c 7f ac 22 10 62  b6 a8 6b 86 52 da 3a 24  |:Z\..".b..k.R.:$|
-\end{lstlisting}   
-In the first case, where different IVs are used: encrypted\_iv1.bin and encrypted\_iv2.bin will be different. In the second case, where the same IV is used: encrypted\_same\_iv.bin will be the same as encrypted\_iv1.bin because the same IV was used.
+2.After recompiling and setting the program to use \verb|execve()|, any attempts to use command chaining or injection as part of the input to the Set-UID program should fail, as figured in \ref{fig:task5.2}, input such as \verb|filename; rm -f somefile| would not cause the deletion of \verb|somefile| because \verb|execve()| would attempt to pass the entire string as a single argument to \verb|/bin/cat|, which would then result in an error as it would be an invalid file name.
+\begin{figure}[h]
+    \centering
+  \subfloat[Step 1 Execute Result\label{fig:task5.1}]{%
+       \includegraphics[width=0.95\textwidth]{figures/task5/task5.1.png}}
+    \hfill
+  \subfloat[Step 2 Execute Result\label{fig:task5.2}]{%
+        \includegraphics[width=0.95\textwidth]{figures/task5/task5.2.png}}
+    \hfill
+    \caption{Execute Result}\label{fig:task5}
+\end{figure}
 
-When different IVs are used, the resulting ciphertexts are different, even for the same plaintext and key. This is crucial for security because it ensures that patterns in the plaintext are not easily observable in the ciphertext.
 
-If the same IV is reused, an observer might notice patterns or repetitions in the ciphertext, which can lead to vulnerabilities and compromise the security of the encryption. Using unique IVs helps in preventing such patterns and adds an additional layer of security.
-    \item \textbf{Task 6.2} 
-    
-    (1) Yes, they can potentially decrypt all subsequent messages encrypted with the same key and IV.
 
-    (2) Yes, I can likely decrypt P2 using a known-plaintext attack.
-   
-    \begin{equation}
-        \begin{aligned}
-          &output\_stream = C1 \oplus P1 \\
-          &P2 = C2 \oplus output\_stream
-        \end{aligned}
-    \end{equation}
+\subsection{Capability Leaking}
+The program \verb|./26| successfully wrote "Malicious Data" to \verb|/etc/zzz|. Initially unable to open \verb|/etc/zzz|, after setting correct permissions and ownership, the Set-UID program, running with root privileges, opened \verb|/etc/zzz|. Upon dropping privileges with \verb|setuid(getuid())|, the child process inherited the file descriptor with root access, leading to the capability leak which allowed writing to the file, even as a non-privileged user. This demonstrates the security risk of inheriting file descriptors from privileged processes.
 
-\begin{lstlisting}[caption={known-plaintext-attack in C},label={lst:task2.6.2},language=C,breaklines=true]
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-int main(int argc, char *argv[]) {
-    // Check arguments
-    if (argc != 4) {
-        printf("Usage: %s <plaintext> <ciphertext1> <ciphertext2>\n", argv[0]);
-        return 1;
-    }
-    // Convert arguments to byte arrays
-    size_t len1 = strlen(argv[1]);
-    unsigned char plaintext[len1 + 1];
-    memcpy(plaintext, argv[1], len1);
-    plaintext[len1] = '\0';
-    size_t len2 = strlen(argv[2]);
-    if (len2 % 2 != 0) {
-        printf("Error: ciphertext1 must be in hexadecimal format\n");
-        return 1;
-    }
-    size_t ciphertext1_len = len2 / 2;
-    unsigned char ciphertext1[ciphertext1_len];
-    for (int i = 0; i < ciphertext1_len; i++) {
-        sscanf(argv[2] + 2 * i, "%2hhx", &ciphertext1[i]);
-    }
-    size_t len3 = strlen(argv[3]);
-    if (len3 % 2 != 0) {
-        printf("Error: ciphertext2 must be in hexadecimal format\n");
-        return 1;
-    }
-    size_t ciphertext2_len = len3 / 2;
-    if (ciphertext1_len != ciphertext2_len) {
-        printf("Error: ciphertexts must be of equal length\n");
-        return 1;
-    }
-    unsigned char ciphertext2[ciphertext2_len];
-    for (int i = 0; i < ciphertext2_len; i++) {
-        sscanf(argv[3] + 2 * i, "%2hhx", &ciphertext2[i]);
-    }
-    // Perform XOR operation and decode
-    unsigned char recovered_text[ciphertext1_len];
-    for (int i = 0; i < ciphertext1_len; i++) {
-        recovered_text[i] = plaintext[i] ^ ciphertext1[i] ^ ciphertext2[i];
-    }
-    // Print recovered plaintext
-    printf("Recovered plaintext: %s\n", recovered_text);
-    return 0;
-}    
-\end{lstlisting} 
-After execute the program by \verb|./attack P1 C1 C2|, the result is Recovered plaintext: ``Order: Launch a missile!"
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.7\textwidth]{figures/task6/task6.png}
+    \caption{Execute Result}\label{fig:task6}
+\end{figure}
 
-    (3) Only the first block of P2 can be confidently revealed in CFB mode.
-
-    \item \textbf{Task 6.3} Here's how we can exploit predictable IVs to determine the content of P1:
-    
-\textbf{Construct P2:}
-
-Eve creates a message P2 identical to P1 except for the first character:
-If she suspects P1 is "Yes", P2 will be "Xes".
-If she suspects P1 is "No", P2 will be "Wo".
-
-\textbf{Request Encryption:}
-
-Eve sends P2 to Bob for encryption.
-Bob, unaware of the attack, encrypts P2 using AES-128 in CBC mode with the predictable IV "1234567890123457".
-
-\textbf{Analyze Ciphertext C2:}
-
-Bob returns the ciphertext C2 to Eve.
-
-\textbf{Eve examines the first block of C2:}
-
-If the first block is "bef65565572ccee2", it strongly suggests P1 was "Yes".
-If the first block is anything else, it indicates P1 was likely "No".
-
-\end{itemize}
+\section{Buffer Overflow Vulnerability}
 
 \subsection{Task 7: Programming using the Crypto Library}
 
@@ -345,7 +180,7 @@ After execute the script, the matched key is \textbf{``Syracuse"}.
     \item Extent of Differences: The number and distribution of differing bytes can vary depending on the specific collision generated.
 \end{enumerate}
 
-\subsection{Task 9: Understanding MD5’s Property}
+\subsection{Task 9: Understanding MD5's Property}
 \begin{lstlisting}[caption={MD5 Property test script},label={lst:task3.9},language=BASH,breaklines=true]
 # out1.bin and out2.bin are  two files  generated in Task8 with the same MD5 hash:
 $ md5sum out1.bin
