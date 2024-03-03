@@ -274,13 +274,105 @@ This error confirms that Stack Guard's canary mechanism effectively prevents buf
 No shell was obtained after recompiling the program with the non-executable stack option as figured as \ref{fig:task14}. The problem is that the stack has been configured to disallow code execution, so even if a buffer overflow occurs and attempts to run shellcode placed on the stack, the CPU will refuse to execute it, leading to a segmentation fault instead. While this protection scheme prevents execution of shellcode on the stack, it does not stop buffer overflows from occurring or other exploitation techniques like Return Oriented Programming (ROP) that can leverage executable code segments elsewhere. The segmentation fault indicates an attempt to execute code on a non-executable stack.
 \begin{figure}[h]
     \centering
-       \includegraphics[width=0.7\textwidth]{figures/task14/task14.png}
+       \includegraphics[width=0.9\textwidth]{figures/task14/task14.png}
     \caption{Stack Guard Protection}\label{fig:task14}
 \end{figure}
 
 \section{Return-to-libc Attack}
 \subsection{Initial Setup}
+The return-to-libc attack sidesteps non-executable stack protections by redirecting a program's execution flow to existing libc functions, circumventing the need for executable shellcode. For demonstration, address space randomization and StackGuard are disabled, while ensuring stacks remain non-executable.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.8\textwidth]{figures/task15/task15.png}
+    \caption{Initial Setup}\label{fig:task15}
+\end{figure}
 
+
+\subsection{The Vulnerable Program}
+The \verb|retlib.c| program contains a buffer overflow vulnerability due to reading more data into a buffer than it can hold. To exploit this for privilege escalation, compile it with no StackGuard and a non-executable stack. Ownership is changed to root and the Set-UID bit set to retain elevated privileges. By carefully crafting the input file \verb|badfile|, it's possible to manipulate the control flow and execute privileged commands, despite the non-executable stack, illustrating the need for comprehensive security checks.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.9\textwidth]{figures/task16/task16.png}
+    \caption{The Vulnerable Program}\label{fig:task16}
+\end{figure}
+
+\subsection{Debugging a program}
+The log shows the debugging process using gdb to extract the addresses of the \verb|system()| and \verb|exit()| functions from libc. This process is essential for constructing a return-to-libc attack. The address of \verb|system()| was found to be \verb|0xb7da4da0|, and the address of \verb|exit()| was \verb|0xb7d989d0|. These addresses were obtained from the Set-UID program \verb|retlib|, ensuring they are correct for the attack. With these addresses, a crafted payload can be used to overflow the buffer and redirect execution to \verb|system()|, thereby gaining unauthorized access or escalating privileges.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.9\textwidth]{figures/task17/task17.png}
+    \caption{Debugging a program}\label{fig:task17}
+\end{figure}
+
+
+\subsection{Putting the shell string in the memory}
+To execute a return-to-libc attack, the command \verb|/bin/sh| must be in memory with a known address. This is accomplished by setting an environment variable, \verb|MYSHELL|, with the string \verb|/bin/sh|. Use the \verb|export| command to set \verb|MYSHELL|, and \verb|env| to verify it's part of the environment. A small C program can print the memory address of \verb|MYSHELL|. When compiled and executed, the output is the address, which will be used as an argument to the \verb|system()| function in the attack. Ensure the executable's name has the same length as  \verb|retlib| for consistent address allocation.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.9\textwidth]{figures/task18/task18.png}
+    \caption{Debugging a program}\label{fig:task18}
+\end{figure}
+
+\subsection{Exploiting the Vulnerability}
+\begin{enumerate}
+    \item Find the Buffer's Starting Point: Determine the starting point of the buffer in the stack frame. This will be the reference for your offsets.
+    \item Locate the Return Address: Identify the exact location where the return address is stored. This can typically be done by creating a pattern in the buffer and observing where the pattern appears in the overwritten return address after a crash.
+    \item Calculate Offsets: 
+    \begin{itemize}  
+        \item \verb|Y|: The offset for the \verb|system()| address is critical because it overwrites the return address on the stack. Through analysis or trial and error, you find that when the function \verb|bof()| returns, the return address is located 34 bytes away from the start of the buffer.
+        \item \verb|Z|: The \verb|exit()| function's address is used to ensure that the program exits cleanly after executing \verb|system()|. You determine that the exit address should be placed 38 bytes from the start of the buffer, right after the address of \verb|system()| to maintain the correct order of execution.
+        \item \verb|X|: Finally, the address of the string \verb|/bin/sh| must be placed in the memory location where the \verb|system()| function will look for its argument. Through debugging, you find that the correct offset for this address is 42 bytes from the start of the buffer.
+    \end{itemize}
+\end{enumerate}
+
+In my case when the buffer size is 22, than the X is 42, Y is 34, and Z is 38.
+
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.7\textwidth]{figures/task19/task19.png}
+    \caption{Exploiting the Vulnerability}\label{fig:task19}
+\end{figure}
+\begin{lstlisting}[caption={exploit.c major part},label={lst:task4.19},language=C,breaklines=true]
+*(long *) &buf[42] = 0xbffffeeb; // \verb|/bin/sh|
+*(long *) &buf[34] = 0xb7e42da0; // system()
+*(long *) &buf[38] = 0xb7e369d0; // exit()
+\end{lstlisting} 
+
+The \verb|exit()| function ensures a clean exit, and changing the filename affects the stack layout, thereby altering the necessary offsets for a successful exploit.
+
+Each change in the environment or program must be analyzed and compensated for to maintain the exploit's effectiveness. These experiments should only be performed in a controlled, ethical, and legal setting.
+
+\subsection{Address Randomization}
+From the observations figured as \ref{fig:task20-1a}, \ref{fig:task20-1b}, \ref{fig:task20-1c}, the address of \verb|system()| and the \verb|MYSHELL| env are randomized per execute.
+
+With ASLR enabled, the attack developed in Subsection 4.5 fails to yield a shell. ASLR randomizes the memory addresses of the stack, heap, and libraries, making hardcoded addresses in the exploit invalid. The unpredictability of \verb|system()|, \verb|exit()|, and \verb|system()|/bin/sh| addresses means the exploit no longer reliably redirects execution. 
+
+Consequently, the return-to-libc attack is thwarted as the exploit cannot accurately predict where to jump in memory, demonstrating ASLR's effectiveness in increasing security against such attacks.
+
+\begin{figure}[h]
+    \centering
+  \subfloat[system and exit address1\label{fig:task20-1a}]{%
+       \includegraphics[width=0.7\textwidth]{figures/task20/task20-1a.png}}
+    \hfill
+  \subfloat[system and exit address2\label{fig:task20-1b}]{%
+        \includegraphics[width=0.7\textwidth]{figures/task20/task20-1b.png}}
+    \hfill
+  \subfloat[shell address\label{fig:task20-1c}]{%
+        \includegraphics[width=0.7\textwidth]{figures/task20/task20-1c.png}}
+    \hfill
+    \caption{Observations for Address Randomization}\label{fig:task20}
+\end{figure}
+
+\subsection{Stack Guard Protection}
+As shown is Figure \ref{fig:task21}, with Stack Guard protection enabled and address randomization disabled, executing the same return-to-libc attack will not yield a shell. The attack attempts to overwrite the return address, but in doing so, it also overwrites the canary. Upon the integrity check, Stack Guard detects the change in the canary value and aborts the program, as evidenced by the "stack smashing detected" message. This protection makes buffer overflow attacks more difficult because it adds an additional layer of defense that must be circumvented.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.7\textwidth]{figures/task21/task21.png}
+    \caption{Result of Stack Guard Protection}\label{fig:task21}
+\end{figure}
+
+\section{Format String Vulnerability}
+\subsection{Crash the program}
 %------------------------------------------------
 
 %\bibliographystyle{ieeetr}
