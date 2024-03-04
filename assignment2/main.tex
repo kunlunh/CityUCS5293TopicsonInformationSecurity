@@ -183,47 +183,55 @@ As shown in Figure \ref{fig:task9}, The segmentation faults when running \verb|.
 \end{figure}
 
 \subsection{Exploiting the Vulnerability}
-First, GDB debug for the stack, find out the \verb|bof| and \verb|strcpy| addresses, figured as \ref{fig:task10.1} and figured as \ref{fig:task10.2}, respectively.
+First, GDB debug for the stack, find out the \verb|bof| and \verb|strcpy| addresses, figured as \ref{fig:task10.1}.
+
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.7\textwidth]{figures/section3/sec3-2.png}
+    \caption{Offsets Result}\label{fig:task10.2}
+\end{figure}
+
+
 \begin{lstlisting}[caption={GDB debug for the stack},label={lst:task3.10-1},language=BASH,breaklines=true]
-gdb stack
-disas main
-disas bof
+gdb-peda$ b bof
+Breakpoint 1 at 0x80484f4: file stack.c, line 15.
+gdb-peda$ run
+gdb-peda$ p/x &buffer
+$1 = 0xbfffeee0
+gdb-peda$ p/x $ebp
+$2 = 0xbfffefd8
+gdb-peda$ p/d 0xbfffefd8-0xbfffeee0
+$3 = 248
+
+\end{lstlisting} 
+
+
+then, edit the \verb|exploit.py| as Codeblock \ref{lst:task3.10-2} filling out the address found by GDB.
+\begin{lstlisting}[caption={exploit.py Major Part},label={lst:task3.10-2},language=PYTHON,breaklines=true]
+#########################################################################
+buffer_add = 0xbfffeee0
+ebp_add = 0xbfffefd8
+offset = ebp_add - buffer_add + 4
+ret = buffer_add + offset + 100
+
+content[offset:offset + 4] = (ret).to_bytes(4,byteorder='little')
+#########################################################################
+
 \end{lstlisting} 
 
 \begin{figure}[h]
     \centering
-  \subfloat[bof address\label{fig:task10.1}]{%
-       \includegraphics[width=0.49\textwidth]{figures/task10/task10.1.png}}
-    \hfill
-  \subfloat[strcpy address\label{fig:task10.2}]{%
-        \includegraphics[width=0.49\textwidth]{figures/task10/task10.2.png}}
-    \hfill
-    \caption{GDB debug for the stack}\label{fig:task10-1}
+       \includegraphics[width=0.7\textwidth]{figures/section3/sec3-1.png}
+    \caption{Buffer Address}\label{fig:task10.1}
 \end{figure}
 
-then, edit the \verb|exploit.c| as Codeblock \ref{lst:task3.10-2} and run the GDB again figured as \ref{fig:task10-2} for figuring out the memory length.
-\begin{lstlisting}[caption={GDB debug for the stack},label={lst:task3.10-2},language=C,breaklines=true]
-/* You need to fill the buffer with appropriate contents here */
-strcpy(buffer, "AAAA");
-\end{lstlisting} 
 
-\begin{figure}[h]
-    \centering
-       \includegraphics[width=0.7\textwidth]{figures/task10/task10.3.png}
-    \caption{Execute Result}\label{fig:task10-2}
-\end{figure}
-
-Obviously, we should fill out the buffer with $45$ characters and add a $SHIFT  > 45 + 4$ to the shellcode as Codeblock \ref{lst:task3.10-3}.
-\begin{lstlisting}[caption={fill the buffer},label={lst:task3.10-3},language=C,breaklines=true]
-/* You need to fill the buffer with appropriate contents here */
-strcpy(buffer, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-strcpy(buffer+50,shellcode);
-\end{lstlisting} 
+Obviously, we should add a $SHIFT  > 45 + 4$ to the shellcode as Codeblock.
 
 Finally, we compile and run the exploit and stack again, respectively. And we can launch the shell with root privilege, figured as \ref{fig:task10-3}.
 \begin{figure}[h]
     \centering
-       \includegraphics[width=0.7\textwidth]{figures/task10/task10.4.png}
+       \includegraphics[width=0.7\textwidth]{figures/section3/sec3-3.png}
     \caption{Execute Result}\label{fig:task10-3}
 \end{figure}
 
@@ -243,21 +251,24 @@ To bypass dash's countermeasure in shellcode, prepend the \verb|setuid(0)| sysca
 Figure \ref{fig:task11.2} shows the shellcode in \verb|exploit.c|. This bypasses dash's countermeasure, allowing the Set-UID program to execute with root privileges.
 \begin{figure}[h]
     \centering
-       \includegraphics[width=0.8\textwidth]{figures/task11/task11.2.png}
-    \caption{Using the above shellcode in exploit.c}\label{fig:task11.2}
+       \includegraphics[width=0.8\textwidth]{figures/section3/sec3-4.png}
+    \caption{Using the above shellcode in exploit.py}\label{fig:task11.2}
 \end{figure}
+
+
 
 \subsection{Defeating Address Randomization}
 With ASLR enabled, the exploit may fail as memory addresses are randomized, making the hardcoded addresses unreliable. The exploit's success becomes unpredictable because the return address might not point to the intended shellcode location.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.6\textwidth]{figures/section3/sec3-5.png}
+    \caption{Break Into Shell}\label{fig:task12}
+\end{figure}
 
 Running the exploit multiple times might eventually succeed because the randomized addresses could align with the shellcode by chance. A larger NOP sled may increase this likelihood, but success is not guaranteed and can take numerous attempts.
 
-In my experiment, No shell was obtained. The segmentation fault after 1,333,478 attempts, figured as \ref{fig:task12}, indicates the exploit consistently hit invalid memory addresses due to Address Space Layout Randomization (ASLR). ASLR randomizes the location of the stack, heap, and libraries, making it challenging for the exploit to predict where to jump to execute the shellcode. The exploit relies on precise addresses; ASLR's randomization ensures that each execution of the vulnerable program maps the stack differently, preventing the exploit from knowing the correct address to use. Repeated attempts increase the likelihood but do not guarantee success, as demonstrated by the large number of failed tries.
-\begin{figure}[h]
-    \centering
-       \includegraphics[width=0.6\textwidth]{figures/task12/task12.png}
-    \caption{Using the above shellcode in exploit.c}\label{fig:task12}
-\end{figure}
+In my experiment, shell was obtained. The segmentation fault after 14,762 attempts, figured as \ref{fig:task12}, indicates the exploit's unpredictability due to ASLR. This defense makes buffer overflow attacks more challenging by randomizing memory addresses, increasing the difficulty of successful exploitation.
+
 
 \subsection{Stack Guard Protection}
 The program \verb|stack| was recompiled without disabling Stack Guard as figured as \ref{fig:task13}. Upon the execution, a buffer overflow attempt was made, and Stack Guard detected the attack, triggering a error message as \verb| *** stack smashing detected ***: ./stack terminated| and aborting the program. 
@@ -278,6 +289,8 @@ No shell was obtained after recompiling the program with the non-executable stac
     \caption{Stack Guard Protection}\label{fig:task14}
 \end{figure}
 
+\bigskip
+\bigskip
 \section{Return-to-libc Attack}
 \subsection{Initial Setup}
 The return-to-libc attack sidesteps non-executable stack protections by redirecting a program's execution flow to existing libc functions, circumventing the need for executable shellcode. For demonstration, address space randomization and StackGuard are disabled, while ensuring stacks remain non-executable.
@@ -364,7 +377,7 @@ Consequently, the return-to-libc attack is thwarted as the exploit cannot accura
 \end{figure}
 
 \subsection{Stack Guard Protection}
-As shown is Figure \ref{fig:task21}, with Stack Guard protection enabled and address randomization disabled, executing the same return-to-libc attack will not yield a shell. The attack attempts to overwrite the return address, but in doing so, it also overwrites the canary. Upon the integrity check, Stack Guard detects the change in the canary value and aborts the program, as evidenced by the "stack smashing detected" message. This protection makes buffer overflow attacks more difficult because it adds an additional layer of defense that must be circumvented.
+As shown is Figure \ref{fig:task21}, with Stack Guard enabled, the return-to-libc attack fails, preventing a shell from being spawned. The attack corrupts the stack canary, a security mechanism, leading to detection and termination of the program with a "stack smashing detected" message. Stack Guard adds a layer of defense that detects and blocks stack buffer overflow attempts, making such attacks significantly more difficult. This protection ensures that even if the buffer is overflowed, the altered canary triggers an alert and aborts the program before the return address is used, thus preventing exploitation.
 \begin{figure}[h]
     \centering
        \includegraphics[width=0.7\textwidth]{figures/task21/task21.png}
@@ -373,6 +386,76 @@ As shown is Figure \ref{fig:task21}, with Stack Guard protection enabled and add
 
 \section{Format String Vulnerability}
 \subsection{Crash the program}
+First, we analysis the approximate storage of variables on the stack would like Table \ref{tab:task22}. To crash the program, we can provide a format string that expects more arguments than are provided to \verb|printf()|. For example, we could input a lot of characters long enough for a buffer overflow to overwrite the return address like Figure \ref{fig:task22-1}. Also we could input a string with several \verb|%s| specifiers, like Figure \ref{fig:task22-2}, which would cause \verb|printf()| to attempt to access additional arguments that were never passed, leading to a segmentation fault when it tries to read from an invalid memory address.
+
+\begin{table}[h]\centering\caption{Variables on the stack}\label{tab:task22}
+\begin{tabular}{ll}
+Variables   & Address \\
+\hline
+d           & Low     \\
+c           &   ↑       \\
+b           &   ↑     \\
+a           &   ↑      \\
+int\_input  &   ↑      \\
+secret*     &   ↑      \\
+user\_input & High   
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.7\textwidth]{figures/task22/task22-1.png}
+    \caption{Crash the program by a lot of characters}\label{fig:task22-1}
+\end{figure}
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.7\textwidth]{figures/task22/task22-2.png}
+    \caption{Crash the program by provide arguments}\label{fig:task22-2}
+\end{figure}
+
+\subsection{Print out the secret[1] value}
+To print out the value of \verb|secret[1]|, which is located in the heap, we can only access the data in the stack. So we can use the address in the stack, with the \verb|%s| parameter in the formatting character to get the \verb|ASCII| representation of its value, and then get its value by calculation. First we need to find the location of \verb|int_input| in the stack, you can do this by first assigning a more specific value to \verb|int_input|, and then traversing the stack searching through the \verb|%d| of the formatted string, as shown in the following figure \ref{fig:task23-1}.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.9\textwidth]{figures/task23/task23-1.png}
+    \caption{Find out the secret[1] address}\label{fig:task23-1}
+\end{figure}
+After finding the correct location. Rerun the program with \verb|int_input| set to the address of \verb|secret[1]|. Replace the corresponding \verb|%d| at the \verb|int_input| location with \verb|%s|. We can read the value at the read address as a string, as shown in the figure \ref{fig:task23-2}.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.7\textwidth]{figures/task23/task23-2.png}
+    \caption{Print out the secret[1] value}\label{fig:task23-2}
+\end{figure}
+
+Obviously, the value of \verb|U| is \verb|0x55| in \verb|ASCII|.
+
+\subsection{Modify the secret[1] value}
+From the previous outputs, we've located the address of \verb|secret[1]| in the stack. We can use the \verb|%n| format specifier to write to \verb|secret[1]|. The \verb|%n| specifier writes the number of characters that have been printed so far into an integer pointer provided to \verb|printf|.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.7\textwidth]{figures/task24/task24.png}
+    \caption{Print out the secret[1] value}\label{fig:task24}
+\end{figure}
+
+In my case, Figured as \ref{fig:task24}, the input of string is \verb|AAAAA%5$n|, than the output should be \verb|0x5| in hex, because there are 5 characters \verb|A| before the \verb|%n|.
+
+\subsection{Modify the secret[1] value to a pre-determined value, i.e., 80 in decimal}
+Since we have figured out the location and the vulnerabilities in the previous steps, we can use the \verb|%n| format specifier to write to \verb|secret[1]|. The \verb|%n| specifier writes the number of characters that have been printed so far into an integer pointer provided to \verb|printf|. We can use the \verb|%n| specifier to write a specific value to \verb|secret[1]|, as shown in the following figure \ref{fig:task25}.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.7\textwidth]{figures/task25/task25.png}
+    \caption{Modify the secret[1] value by number of characters}\label{fig:task25}
+\end{figure}
+
+In my case 1, the input of string is \verb|AAAA...AA%5$n|, than the output should be \verb|0x50| in hex, because there are 80 characters \verb|A| before the \verb|%n|.
+
+Another way to achieve this is to use the \verb|%x| format specifier to print the number of characters printed so far, and then use the \verb|%n| format specifier to write to \verb|secret[1]|, such \verb|%80x%5$n|, as shown in the following figure \ref{fig:task25-2}.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.9\textwidth]{figures/task25/task25-2.png}
+    \caption{Modify the secret[1] by format specifier}\label{fig:task25-2}
+\end{figure}
+
 %------------------------------------------------
 
 %\bibliographystyle{ieeetr}
